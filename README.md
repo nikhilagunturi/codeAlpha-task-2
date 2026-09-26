@@ -81,6 +81,7 @@ This project includes [`app.py`](file:///c:/Users/nikhi/Downloads/codeAlpha%20ta
    - Set **Main file path** to `app.py`.
    - Click **"Deploy!"**.
    - Your permanent live URL will be: `https://<your-repo-name>.streamlit.app`!
+   - Live demo Link: https://visiontrack1.streamlit.app/
 
 > [!TIP]
 > **Streamlit Iframe Camera Note**: Inside Streamlit Cloud, video upload (`.mp4`, `.webm`) works 100% seamlessly. If a client's browser blocks live webcam access due to iframe sandbox policies on some browsers, users can also access the direct standalone link.
