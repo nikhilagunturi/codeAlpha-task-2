@@ -1,0 +1,20 @@
+{
+  "name": "codealpha-object-detection-and-tracking",
+  "version": "1.0.0",
+  "description": "Real-time Web-based Object Detection and Tracking Dashboard using JavaScript, HTML, and CSS for CodeAlpha Internship Task 2",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve ."
+  },
+  "keywords": [
+    "object-detection",
+    "object-tracking",
+    "yolo",
+    "coco-ssd",
+    "tensorflow-js",
+    "computer-vision",
+    "codealpha"
+  ],
+  "author": "CodeAlpha Intern",
+  "license": "MIT"
+}

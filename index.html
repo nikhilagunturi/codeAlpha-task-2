@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real-Time Object Detection & Tracking | CodeAlpha Task 2</title>
+  <meta name="description" content="Browser-based real-time object detection and tracking dashboard using JavaScript, HTML, CSS, and TensorFlow.js COCO-SSD / YOLO-compatible classes.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="logo-group">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/>
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M12 9v-2M12 17v-2M9 12H7M17 12h-2"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="app-title">VisionTrack AI</h1>
+          <span class="app-subtitle">CodeAlpha Internship — Task 2: Real-time Object Detection & Tracking</span>
+        </div>
+      </div>
+
+      <div class="header-status">
+        <div class="status-chip" id="modelStatusChip">
+          <span class="status-dot loading" id="statusDot"></span>
+          <span id="modelStatusText">Loading Vision Model...</span>
+        </div>
+        <div class="status-chip secondary" id="sourceStatusChip">
+          <span class="source-icon">📹</span>
+          <span id="sourceStatusText">Source: Idle</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="main-layout">
+      <!-- Left Column: Video Viewport & Detection Canvas -->
+      <section class="viewport-section">
+        <div class="viewport-card">
+          <div class="viewport-header">
+            <div class="viewport-title">
+              <span class="live-indicator" id="livePill">STANDBY</span>
+              <span>Live Visual Feed</span>
+            </div>
+            <div class="viewport-metrics-inline">
+              <span class="metric-tag">FPS: <strong id="inlineFps">0</strong></span>
+              <span class="metric-tag">Res: <strong id="inlineResolution">-- x --</strong></span>
+            </div>
+          </div>
+
+          <div class="viewport-wrapper" id="viewportWrapper">
+            <!-- Hidden Video element providing frames -->
+            <video id="inputVideo" playsinline muted style="display: none;"></video>
+            
+            <!-- Active Canvas rendering boxes, IDs, and frames -->
+            <canvas id="outputCanvas"></canvas>
+
+            <!-- Placeholder overlay when camera/video is not yet running -->
+            <div class="viewport-placeholder" id="viewportPlaceholder">
+              <div class="placeholder-graphic">
+                <svg viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <rect x="2" y="4" width="20" height="16" rx="3"/>
+                  <circle cx="12" cy="12" r="4"/>
+                  <path d="M18 7h.01"/>
+                  <path d="M7 21l3-6 4 3 4-8"/>
+                </svg>
+              </div>
+              <h3>Feed Inactive</h3>
+              <p>Start your webcam or upload a video file to begin real-time object detection & tracking.</p>
+              <div class="placeholder-actions">
+                <button class="btn btn-primary" id="btnStartCameraHero">
+                  <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/>
+                  </svg>
+                  Start Webcam
+                </button>
+                <label class="btn btn-secondary upload-trigger" for="heroVideoUpload">
+                  <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                  </svg>
+                  Upload Video
+                  <input type="file" id="heroVideoUpload" accept="video/*" hidden>
+                </label>
+              </div>
+            </div>
+
+            <!-- Loading Spinner Overlay -->
+            <div class="loading-overlay" id="loadingOverlay">
+              <div class="spinner"></div>
+              <p id="loadingMessage">Initializing Neural Network...</p>
+            </div>
+          </div>
+
+          <!-- Video Playback Bar (Visible when video is uploaded) -->
+          <div class="video-playback-bar" id="videoPlaybackBar" style="display: none;">
+            <button class="btn-icon" id="btnPlayPauseVideo" title="Play/Pause">
+              <span id="playPauseIcon">⏸️</span>
+            </button>
+            <input type="range" class="timeline-slider" id="videoTimeline" min="0" max="100" value="0" step="0.1">
+            <span class="time-display" id="videoTimeDisplay">00:00 / 00:00</span>
+            <button class="btn-icon" id="btnLoopVideo" title="Toggle Loop" class="active">
+              🔁
+            </button>
+          </div>
+        </div>
+
+        <!-- Telemetry Stats Cards -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon cyan">🎯</div>
+            <div class="stat-content">
+              <span class="stat-label">Active Objects</span>
+              <span class="stat-value" id="statActiveCount">0</span>
+              <span class="stat-sub">Current frame</span>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon purple">🆔</div>
+            <div class="stat-content">
+              <span class="stat-label">Total Tracked</span>
+              <span class="stat-value" id="statTotalTracked">0</span>
+              <span class="stat-sub">Unique IDs generated</span>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon emerald">⚡</div>
+            <div class="stat-content">
+              <span class="stat-label">Inference FPS</span>
+              <span class="stat-value" id="statFps">0</span>
+              <span class="stat-sub">Real-time performance</span>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon amber">⏱️</div>
+            <div class="stat-content">
+              <span class="stat-label">Latency</span>
+              <span class="stat-value" id="statLatency">0 <small>ms</small></span>
+              <span class="stat-sub">Per detection step</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: Control Dashboard & Analytics -->
+      <aside class="control-panel">
+        <!-- Input Source Controls -->
+        <div class="panel-card">
+          <div class="panel-card-header">
+            <h3>🎮 Source Controls</h3>
+          </div>
+          <div class="panel-card-body">
+            <div class="button-group">
+              <button class="btn btn-primary" id="btnStartCamera">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/>
+                </svg>
+                Start Camera
+              </button>
+              <button class="btn btn-danger" id="btnStopFeed" disabled>
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <rect x="6" y="6" width="12" height="12"/>
+                </svg>
+                Stop Feed
+              </button>
+            </div>
+
+            <div class="upload-container">
+              <label class="btn btn-secondary upload-btn" for="videoFileInput">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                </svg>
+                <span>Upload Video File (MP4/WebM)</span>
+                <input type="file" id="videoFileInput" accept="video/*" hidden>
+              </label>
+              <div class="file-name-preview" id="uploadedFileName">No video selected</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Detection & Tracking Tuning -->
+        <div class="panel-card">
+          <div class="panel-card-header">
+            <h3>⚙️ Detection & Tracking Parameters</h3>
+          </div>
+          <div class="panel-card-body">
+            <div class="control-slider-group">
+              <div class="slider-header">
+                <label for="confThreshold">Confidence Threshold</label>
+                <span class="slider-value" id="confThresholdValue">50%</span>
+              </div>
+              <input type="range" id="confThreshold" min="15" max="95" value="50" step="1">
+              <span class="control-hint">Minimum model certainty required to consider a detection</span>
+            </div>
+
+            <div class="control-slider-group">
+              <div class="slider-header">
+                <label for="iouThreshold">IoU Tracking Match Threshold</label>
+                <span class="slider-value" id="iouThresholdValue">0.35</span>
+              </div>
+              <input type="range" id="iouThreshold" min="0.10" max="0.80" value="0.35" step="0.05">
+              <span class="control-hint">Overlap ratio to associate detected boxes to existing tracks</span>
+            </div>
+
+            <div class="control-slider-group">
+              <div class="slider-header">
+                <label for="maxDisappeared">Max Disappeared Frames</label>
+                <span class="slider-value" id="maxDisappearedValue">15</span>
+              </div>
+              <input type="range" id="maxDisappeared" min="5" max="60" value="15" step="1">
+              <span class="control-hint">Frames to preserve track ID before retiring an occluded object</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Visual HUD Display Options -->
+        <div class="panel-card">
+          <div class="panel-card-header">
+            <h3>👁️ Display Settings</h3>
+          </div>
+          <div class="panel-card-body">
+            <div class="toggle-list">
+              <label class="toggle-item">
+                <span>Show Bounding Boxes</span>
+                <input type="checkbox" id="toggleBoxes" checked>
+                <span class="toggle-slider"></span>
+              </label>
+
+              <label class="toggle-item">
+                <span>Show Object Class Label</span>
+                <input type="checkbox" id="toggleLabels" checked>
+                <span class="toggle-slider"></span>
+              </label>
+
+              <label class="toggle-item">
+                <span>Show Confidence Score</span>
+                <input type="checkbox" id="toggleConfidence" checked>
+                <span class="toggle-slider"></span>
+              </label>
+
+              <label class="toggle-item">
+                <span>Show Tracking Unique ID</span>
+                <input type="checkbox" id="toggleTrackingId" checked>
+                <span class="toggle-slider"></span>
+              </label>
+
+              <label class="toggle-item">
+                <span>Show Motion Trajectory Trail</span>
+                <input type="checkbox" id="toggleTrails" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Detected Classes Breakdown -->
+        <div class="panel-card">
+          <div class="panel-card-header">
+            <h3>📊 Current Class Breakdown</h3>
+            <span class="badge" id="classCountBadge">0 Types</span>
+          </div>
+          <div class="panel-card-body">
+            <div class="class-chips-container" id="classChipsContainer">
+              <span class="empty-chips-hint">No objects currently detected.</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>CodeAlpha Internship Task 2: Object Detection and Tracking &bull; Pure Client-Side JavaScript, HTML5 Canvas &amp; CSS &bull; 80 COCO Classes (YOLO Compatible)</p>
+    </footer>
+  </div>
+
+  <!-- TensorFlow.js and COCO-SSD for High-Performance Browser Object Detection -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
+
+  <!-- Application Logic Modules -->
+  <script src="js/tracker.js"></script>
+  <script src="js/detector.js"></script>
+  <script src="js/visualizer.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
